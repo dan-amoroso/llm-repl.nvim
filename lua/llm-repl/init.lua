@@ -1,7 +1,12 @@
 local M = {}
 
+-- hello, you ready?
+
 M.config = {
 	api_url = "hq.local:11434/api/generate",
+	model = "deepseek-r1:14b",
+	timeout = 200000,
+	stream = true,
 	buf_name = "_ChatBuffer",
 }
 
@@ -47,15 +52,13 @@ local function find_or_create_buffer()
 end
 
 -- post prompts to LLM
-local function send_to_llm(prompt)
-	local http = require("plenary.curl")
-	local response = http.post(M.config.api_url, {
+local function send_to_llm(prompt, callback, on_complete)
+	local http = require("llm-repl.async_curl")
+	http.post(M.config.api_url, {
 		body = vim.fn.json_encode({ prompt = prompt, model = M.config.model, stream = M.config.stream }),
 		headers = { ["Content-Type"] = "application/json" },
 		timeout = 100000,
-	})
-
-	return response
+	}, callback, on_complete)
 end
 
 function M.prompt()
@@ -69,9 +72,13 @@ function M.prompt()
 
 	append_to_buffer(buf, "User: \n" .. prompt .. "\n\n")
 
-	local response = send_to_llm(prompt)
+	append_to_buffer(buf, "Response: \n\n")
 
-	append_to_buffer(buf, "Response: \n" .. response.body .. "\n\n")
+	send_to_llm(prompt, function(chunk)
+		append_to_buffer(buf, chunk.response)
+	end, function()
+		append_to_buffer(buf, "\n\n")
+	end)
 end
 
 function M.open_chat()
@@ -92,3 +99,5 @@ function M.setup()
 		{ noremap = true, desc = "llm-repl: open chat buffer" }
 	)
 end
+
+return M
