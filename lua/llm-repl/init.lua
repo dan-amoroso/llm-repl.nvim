@@ -3,23 +3,26 @@ local M = {}
 -- hello, you ready?
 
 M.config = {
-	api_url = "hq.local:11434/api/generate",
-	model = "deepseek-r1:14b",
+	api_url = "http://192.168.1.176:11434/api/generate",
+	model = "deepseek-coder-v2",
 	timeout = 200000,
-	stream = true,
+	stream = false,
 	buf_name = "_ChatBuffer",
 }
 
 -- append multiline strings to buffer
 local function append_to_buffer(buf_nr, multiline_text)
 	local lines = {}
-	for line in multiline_text:gmatch("[^\r\n]+") do
-		table.insert(lines, line)
+	if multiline_text then
+		for line in multiline_text:gmatch("[^\r\n]+") do
+			table.insert(lines, line)
+		end
 	end
 
-	local line_count = vim.api.nvim_buf_line_count(buf_nr)
-
-	vim.api.nvim_buf_set_lines(buf_nr, line_count, line_count, false, lines)
+	vim.schedule(function()
+		local line_count = vim.api.nvim_buf_line_count(buf_nr)
+		vim.api.nvim_buf_set_lines(buf_nr, line_count, line_count, false, lines)
+	end)
 end
 
 -- get text currently under visual selection
@@ -54,10 +57,13 @@ end
 -- post prompts to LLM
 local function send_to_llm(prompt, callback, on_complete)
 	local http = require("llm-repl.async_curl")
-	http.post(M.config.api_url, {
-		body = vim.fn.json_encode({ prompt = prompt, model = M.config.model, stream = M.config.stream }),
-		headers = { ["Content-Type"] = "application/json" },
-		timeout = 100000,
+	http.post("POST", M.config.api_url, {
+		body = vim.fn.json_encode({
+			prompt = prompt,
+			model = M.config.model,
+			stream = M.config.stream,
+		}),
+		timeout = M.config.timeout,
 	}, callback, on_complete)
 end
 
@@ -70,12 +76,16 @@ function M.prompt()
 
 	local buf = find_or_create_buffer()
 
-	append_to_buffer(buf, "User: \n" .. prompt .. "\n\n")
+	append_to_buffer(buf, "\n\n\n" .. prompt .. "\n\n")
 
-	append_to_buffer(buf, "Response: \n\n")
+	append_to_buffer(buf, "\n\n\n")
 
-	send_to_llm(prompt, function(chunk)
-		append_to_buffer(buf, chunk.response)
+	send_to_llm(prompt, function(body, err)
+		if body then
+			append_to_buffer(buf, body.response)
+		else
+			append_to_buffer(buf, err)
+		end
 	end, function()
 		append_to_buffer(buf, "\n\n")
 	end)
