@@ -100,13 +100,13 @@ function M.setup()
 		"v",
 		"<leader>ll",
 		":lua require('llm-repl').prompt()<CR>",
-		{ noremap = true, desc = "llm-repl: send selection as prompt" }
+		{ noremap = true, desc = "llm-repl: send selection as prompt", silent = true }
 	)
 	vim.api.nvim_set_keymap(
 		"n",
 		"<leader>lc",
 		":lua require('llm-repl').open_chat()<CR>",
-		{ noremap = true, desc = "llm-repl: open chat buffer" }
+		{ noremap = true, desc = "llm-repl: open chat buffer", silent = true }
 	)
 end
 
