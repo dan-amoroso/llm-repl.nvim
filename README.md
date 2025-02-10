@@ -1,3 +1,12 @@
+#### status
+not usable, being developed
+
+#### todo
+- keep context between consecutive prompts
+- execute llm requests asynchronously
+- stream responses from llm
+- render chat buffer with proper markdown?
+
 ### Why?
 I don't enjoy the ghost text completion that most integrations with LLMs use, but the copy-paste workflow with the web ui is too distracting and too much work. I am attempting to find a middle-ground.
 
