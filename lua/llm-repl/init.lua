@@ -1,15 +1,15 @@
 local M = {}
-
--- hello, you ready?
-
+local async = require("plenary.async")
+--hello
 M.config = {
-	api_url = "http://192.168.1.176:11434/api/generate",
+	api_url = "http://localhost:11434/api/generate",
 	model = "deepseek-coder-v2",
 	timeout = 200000,
 	stream = false,
 	buf_name = "_ChatBuffer",
 }
 
+--is this idiomatic lua for neovim?
 -- append multiline strings to buffer
 local function append_to_buffer(buf_nr, multiline_text)
 	local lines = {}
@@ -55,16 +55,16 @@ local function find_or_create_buffer()
 end
 
 -- post prompts to LLM
-local function send_to_llm(prompt, callback, on_complete)
+local function send_to_llm(prompt, callback)
 	local http = require("llm-repl.async_curl")
-	http.post("POST", M.config.api_url, {
+	http.request("POST", M.config.api_url, {
 		body = vim.fn.json_encode({
 			prompt = prompt,
 			model = M.config.model,
 			stream = M.config.stream,
 		}),
 		timeout = M.config.timeout,
-	}, callback, on_complete)
+	}, nil, callback)
 end
 
 function M.prompt()
@@ -76,18 +76,22 @@ function M.prompt()
 
 	local buf = find_or_create_buffer()
 
-	append_to_buffer(buf, "\n\n\n" .. prompt .. "\n\n")
+	append_to_buffer(buf, " ")
+	append_to_buffer(buf, prompt)
+	append_to_buffer(buf, " ")
 
-	append_to_buffer(buf, "\n\n\n")
-
-	send_to_llm(prompt, function(body, err)
-		if body then
-			append_to_buffer(buf, body.response)
+	send_to_llm(prompt, function(err, body)
+		if not err then
+			local success, decoded = pcall(vim.fn.json_decode(body))
+			if not success then
+				append_to_buffer(buf, "failed to parse")
+			else
+				append_to_buffer(buf, decoded)
+				append_to_buffer(buf, decoded.response or "nil")
+			end
 		else
 			append_to_buffer(buf, err)
 		end
-	end, function()
-		append_to_buffer(buf, "\n\n")
 	end)
 end
 
@@ -95,18 +99,28 @@ function M.open_chat()
 	vim.api.nvim_set_current_buf(find_or_create_buffer())
 end
 
+function M.open_windowed()
+	vim.api.nvim_open_win(find_or_create_buffer(), false, { split = "right", win = -1, style = "minimal" })
+end
+
 function M.setup()
 	vim.api.nvim_set_keymap(
 		"v",
-		"<leader>ll",
+		"<leader>lll",
 		":lua require('llm-repl').prompt()<CR>",
 		{ noremap = true, desc = "llm-repl: send selection as prompt", silent = true }
 	)
 	vim.api.nvim_set_keymap(
 		"n",
-		"<leader>lc",
+		"<leader>llc",
 		":lua require('llm-repl').open_chat()<CR>",
 		{ noremap = true, desc = "llm-repl: open chat buffer", silent = true }
+	)
+	vim.api.nvim_set_keymap(
+		"n",
+		"<leader>llv",
+		":lua require('llm-repl').open_windowed()<CR>",
+		{ noremap = true, desc = "llm-repl: chat in a separate vim window", silent = true }
 	)
 end
 
