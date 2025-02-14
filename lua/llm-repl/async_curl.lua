@@ -1,21 +1,19 @@
 local AsyncCurl = {}
 
-local Job = require("plenary.job")
+local http = require("socket.http")
+local ltn12 = require("ltn12")
+local json = require("dkjson")
 
 local function async_curl(method, url, options, on_chunk, on_complete)
-	Job:new({
-		enable_handlers = true,
-		command = "curl",
-		args = { url, "-d", options.body },
-		--cwd = "/usr/bin",
-		--env = { ["a"] = "b" },
-		on_stderr = function(j, err)
-			print(err)
-			print(j)
-		end,
-		on_stdout = on_chunk,
-		on_exit = on_complete,
-	}):start() -- or start()
+	local res, code, headers, status = http.request({
+		url = url,
+		method = method,
+		headers = { ["Content-Type"] = "applicatin/json" },
+		source = ltn12.source.string(options.body),
+		sink = on_chunk,
+	})
+
+	print(res, code, headers, status)
 end
 
 AsyncCurl.request = async_curl
