@@ -1,0 +1,3 @@
+#!/bin/sh
+
+LUAROCKS_SYSCONFDIR='/opt/homebrew/etc/luarocks' exec '/opt/homebrew/bin/lua5.1' -e 'package.path="/Users/dan/workspace/llm-repl.nvim/lua_modules/share/lua/5.1/?.lua;/Users/dan/workspace/llm-repl.nvim/lua_modules/share/lua/5.1/?/init.lua;"..package.path;package.cpath="/Users/dan/workspace/llm-repl.nvim/lua_modules/lib/lua/5.1/?.so;"..package.cpath;local k,l,_=pcall(require,"luarocks.loader") _=k and l.add_context("luacheck","1.2.0-1")' '/Users/dan/workspace/llm-repl.nvim/lua_modules/lib/luarocks/rocks-5.1/luacheck/1.2.0-1/bin/luacheck' "$@"
